@@ -21,6 +21,9 @@ class StockServiceTest {
     private StockService stockService;
 
     @Autowired
+    private PessimisticLockStockService pessimisticLockStockService;
+
+    @Autowired
     private StockRepository stockRepository;
 
     @BeforeEach
@@ -66,7 +69,7 @@ class StockServiceTest {
     * 카운트다운이 되면 게이트(latch)가 열리는 것이다.
      */
     @Test
-    public void 동시에_100개의_쓰레드_요청한다() throws InterruptedException {
+    public void SYNCHRONIZED_동시에_100개의_쓰레드_요청한다() throws InterruptedException {
         // given
         int threadCount = 100;
         // 멀티 쓰레드 -> ExecutorService
@@ -78,6 +81,39 @@ class StockServiceTest {
             executorService.submit(() -> {
                 try {
                     stockService.decrease(1L, 1L);
+                } finally {
+                    countDownLatch.countDown();
+                }
+            });
+        }
+
+        // https://stackoverflow.com/questions/41866691/what-is-the-purpose-of-await-in-countdownlatch
+        // The one who waits for the action to be completed should call await() method.
+        // This will wait indefinitely until all threads mark the work as processed,
+        // by calling the countDown().
+        countDownLatch.await();
+
+        Stock stock = stockRepository.findById(1L).orElseThrow(
+                () -> new IllegalArgumentException("Stock not found")
+        );
+
+        // then: expected is zero
+        assertEquals(0L, stock.getQuantity());
+    }
+
+    @Test
+    public void PESSIMISTIC_LOCK_동시에_100개의_쓰레드_요청한다() throws InterruptedException {
+        // given
+        int threadCount = 100;
+        // 멀티 쓰레드 -> ExecutorService
+        ExecutorService executorService = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch countDownLatch = new CountDownLatch(threadCount);
+
+        // when
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try {
+                    pessimisticLockStockService.decrease(1L, 1L);
                 } finally {
                     countDownLatch.countDown();
                 }
