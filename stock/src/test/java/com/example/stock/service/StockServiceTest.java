@@ -1,6 +1,7 @@
 package com.example.stock.service;
 
 import com.example.stock.domain.Stock;
+import com.example.stock.facade.LettuceLockStockFacade;
 import com.example.stock.facade.NamedLockStockFacade;
 import com.example.stock.facade.OptimisticLockStockFacade;
 import com.example.stock.repository.StockRepository;
@@ -30,6 +31,8 @@ class StockServiceTest {
     @Autowired private OptimisticLockStockFacade stockOptimisticLockFacade;
 
     @Autowired private NamedLockStockFacade namedLockStockFacade;
+
+    @Autowired private LettuceLockStockFacade lettuceLockStockFacade;
 
     @Autowired private StockRepository stockRepository;
 
@@ -100,7 +103,7 @@ class StockServiceTest {
         assertThat(afterQuantity).isZero();
     }
 
-    @DisplayName("optimistic lock을 사용한 재고 감소 - 동시에 1000개 테스트 | 36.494s")
+    @DisplayName("optimistic lock을 사용한 재고 감소 - 동시에 1000개 테스트 | 36.494s 소요")
     // 충돌이 빈번하게 일어나지 않을 것이라면 Optimistic Lock을 사용한다.
     @Test
     void OPTIMISTIC_LOCK을_사용한_재고_감소() throws InterruptedException {
@@ -126,7 +129,7 @@ class StockServiceTest {
         assertThat(afterQuantity).isZero();
     }
 
-    @DisplayName("named lock 을 사용한 재고 감소 - 동시에 1000개 테스트 | 21.857s")
+    @DisplayName("named lock 을 사용한 재고 감소 - 동시에 1000개 테스트 | 21.857s 소요")
     // 데이터 소스를 분리하지 않고 하나로 사용할 경우 커넥션 풀이 부족해질 수 있으므로 분리하는 것을 추천한다.
     @Test
     void NAMED_LOCK을_사용한_재고_감소() throws InterruptedException {
@@ -147,6 +150,35 @@ class StockServiceTest {
         // then
         final Long afterQuantity = stockRepository.getByProductId(productId).getQuantity();
         System.out.println("### NAMED LOCK 동시성 처리 이후 수량 ###" + afterQuantity);
+        assertThat(afterQuantity).isZero();
+    }
+
+    @DisplayName("redis lettuce lock 을 사용한 재고 감소 - 동시에 1000개 테스트 | 49.581s")
+    // Redis를 사용하면 트랜잭션에 따라 대응되는 현재 트랜잭션 풀 세션 관리를 하지 않아도 되므로 구현이 편리하다.
+    // Spin Lock 방식이므로 부하를 줄 수 있어서 thread busy waiting을 통하여 요청 간의 시간을 주어야 한다.
+    @Test
+    void LETTUCE_LOCK을_사용한_재고_감소() throws InterruptedException {
+        // given
+
+        // when
+        IntStream.range(0, threadCount).forEach(e -> executorService.submit(() -> {
+                    try {
+                        try {
+                            lettuceLockStockFacade.decrease(productId, quantity);
+                        } catch (InterruptedException ex) {
+                            throw new RuntimeException(ex);
+                        }
+                    } finally {
+                        countDownLatch.countDown();
+                    }
+                }
+        ));
+
+        countDownLatch.await();
+
+        // then
+        final Long afterQuantity = stockRepository.getByProductId(productId).getQuantity();
+        System.out.println("### LETTUCE LOCK 동시성 처리 이후 수량 ###" + afterQuantity);
         assertThat(afterQuantity).isZero();
     }
 }
