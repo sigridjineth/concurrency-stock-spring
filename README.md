@@ -146,5 +146,5 @@ import javax.persistence.Version;
 
 ## 참고 문헌
 
-https://devroach.tistory.com/83
-https://github.com/Hyune-c/manage-stock-concurrency
+* https://devroach.tistory.com/83
+* https://github.com/Hyune-c/manage-stock-concurrency
