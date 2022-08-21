@@ -1,6 +1,7 @@
 package com.example.stock.service;
 
 import com.example.stock.domain.Stock;
+import com.example.stock.facade.NamedLockStockFacade;
 import com.example.stock.facade.OptimisticLockStockFacade;
 import com.example.stock.repository.StockRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -27,6 +28,8 @@ class StockServiceTest {
     private PessimisticLockStockService pessimisticLockStockService;
 
     @Autowired private OptimisticLockStockFacade stockOptimisticLockFacade;
+
+    @Autowired private NamedLockStockFacade namedLockStockFacade;
 
     @Autowired private StockRepository stockRepository;
 
@@ -120,6 +123,30 @@ class StockServiceTest {
         // then
         final Long afterQuantity = stockRepository.getByProductId(productId).getQuantity();
         System.out.println("### OPTIMISTIC LOCK 동시성 처리 이후 수량 ###" + afterQuantity);
+        assertThat(afterQuantity).isZero();
+    }
+
+    @DisplayName("named lock 을 사용한 재고 감소 - 동시에 1000개 테스트 | 21.857s")
+    // 데이터 소스를 분리하지 않고 하나로 사용할 경우 커넥션 풀이 부족해질 수 있으므로 분리하는 것을 추천한다.
+    @Test
+    void NAMED_LOCK을_사용한_재고_감소() throws InterruptedException {
+        // given
+
+        // when
+        IntStream.range(0, threadCount).forEach(e -> executorService.submit(() -> {
+                    try {
+                        namedLockStockFacade.decrease(productId, quantity);
+                    } finally {
+                        countDownLatch.countDown();
+                    }
+                }
+        ));
+
+        countDownLatch.await();
+
+        // then
+        final Long afterQuantity = stockRepository.getByProductId(productId).getQuantity();
+        System.out.println("### NAMED LOCK 동시성 처리 이후 수량 ###" + afterQuantity);
         assertThat(afterQuantity).isZero();
     }
 }
