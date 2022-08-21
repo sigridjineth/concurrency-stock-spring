@@ -1,6 +1,7 @@
 package com.example.stock.facade;
 
 import com.example.stock.repository.RedisRepository;
+import com.example.stock.service.StockNonSynchronizedService;
 import com.example.stock.service.StockService;
 import org.springframework.stereotype.Component;
 
@@ -9,9 +10,9 @@ public class LettuceLockStockFacade {
 
     private final RedisRepository redisRepository;
 
-    private final StockService stockService;
+    private final StockNonSynchronizedService stockService;
 
-    public LettuceLockStockFacade(final RedisRepository redisRepository, final StockService stockService) {
+    public LettuceLockStockFacade(final RedisRepository redisRepository, final StockNonSynchronizedService stockService) {
         this.redisRepository = redisRepository;
         this.stockService = stockService;
     }
