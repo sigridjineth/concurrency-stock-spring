@@ -1,5 +1,6 @@
 package com.example.stock.domain;
 
+import javax.persistence.Version;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
@@ -21,6 +22,9 @@ public class Stock {
         this.productId = productId;
         this.quantity = quantity;
     }
+
+    @Version
+    private Long version;
 
     public Long getQuantity() {
         return quantity;
