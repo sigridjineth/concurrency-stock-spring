@@ -11,6 +11,21 @@
 * Apple Macbook Pro M1
 * Docker Compose-based MySQL
 * Docker Compose-based Redis
+* JDK 11
+* IntelliJ & JUnit 5
+
+## 테스트 결과
+
+* Java 11의 ExecutorService와 CountDownLatch API를 이용하여 1000개의 쓰레드를 띄운 후 테스트 하였다.
+* 테스트 성능: Pessimistic Lock > Synchronized Lock > Named Lock > Optimistic Lock > Lettuce Lock
+
+```
+pessimistic lock을 사용한 재고 감소 - 동시에 1000개 테스트 | 12.415s 소요
+SYNCHRONIZED를 사용한 재고 감소 - 동시 1000개 테스트 | 16.994s 소요
+named lock 을 사용한 재고 감소 - 동시에 1000개 테스트 | 21.857s 소요
+optimistic lock을 사용한 재고 감소 - 동시에 1000개 테스트 | 36.494s 소요
+redis lettuce lock 을 사용한 재고 감소 - 동시에 1000개 테스트 | 49.581s 소요
+```
 
 ## 테스트 로직
 
